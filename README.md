@@ -1,6 +1,6 @@
 # PERLOPS
 
-PERLOPS is a collection of Hack platform and Nand2Tetris experiments, written
+My own computer: a collection of Hack platform and Nand2Tetris experiments, written
 primarily in Jack, alongside a Vivado project and screen recordings.
 
 ## Projects
