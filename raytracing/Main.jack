@@ -1,0 +1,214 @@
+/**
+ * Ray tracer, stage 2.
+ *
+ * Camera at the origin looking down +z, y points DOWN (like the screen).
+ * Image = 128x64 "blocks", each block is 4x4 pixels showing a brightness 0..16
+ * as a Bayer dither pattern. Patterns are written straight into screen memory
+ * (16384..24575): one 16-bit word holds 4 blocks side by side.
+ *
+ * Everything is 16-bit integer math, so we avoid big squares:
+ *  - ray direction d = (sx, sy, 64), length l = sqrt(d.d)
+ *  - distance of a sphere centre from the ray = |c x d| / l  (cross product,
+ *    computed in units of 1/4 so small spheres don't get noisy edges)
+ *  - light direction L = (-40,-70,-58), length ~100 (up, left, toward camera)
+ *  - floor is the plane y = 20
+ */
+class Main {
+    static Array scx, scy, scz, srad, srad2, pat;
+
+    function void init() {
+        var Array bayer;
+        var int b, r, i, v, w;
+
+        let scx = Array.new(3);
+        let scy = Array.new(3);
+        let scz = Array.new(3);
+        let srad = Array.new(3);
+        let srad2 = Array.new(3);
+
+        // each sphere rests on the floor: centre y + radius = 20
+        let scx[0] = -14; let scy[0] = 8;  let scz[0] = 60; let srad[0] = 12; let srad2[0] = 144;
+        let scx[1] = 14;  let scy[1] = 12; let scz[1] = 50; let srad[1] = 8;  let srad2[1] = 64;
+        let scx[2] = -2;  let scy[2] = 15; let scz[2] = 90; let srad[2] = 5;  let srad2[2] = 25;
+
+        // 4x4 Bayer thresholds
+        let bayer = Array.new(16);
+        let bayer[0] = 0;   let bayer[1] = 8;   let bayer[2] = 2;   let bayer[3] = 10;
+        let bayer[4] = 12;  let bayer[5] = 4;   let bayer[6] = 14;  let bayer[7] = 6;
+        let bayer[8] = 3;   let bayer[9] = 11;  let bayer[10] = 1;  let bayer[11] = 9;
+        let bayer[12] = 15; let bayer[13] = 7;  let bayer[14] = 13; let bayer[15] = 5;
+
+        // pat[(b*4)+r] = 4-bit row r of the pattern for brightness b
+        // a bit = 1 means a BLACK pixel; leftmost pixel is the lowest bit
+        let pat = Array.new(68);
+        let b = 0;
+        while (b < 17) {
+            let r = 0;
+            while (r < 4) {
+                let v = 0;
+                let w = 1;
+                let i = 0;
+                while (i < 4) {
+                    if (b < (bayer[(r * 4) + i] + 1)) { let v = v + w; }
+                    let w = w + w;
+                    let i = i + 1;
+                }
+                let pat[(b * 4) + r] = v;
+                let r = r + 1;
+            }
+            let b = b + 1;
+        }
+        do bayer.dispose();
+        return;
+    }
+
+    // Is the light blocked between point (hx,hy,hz) and the light?
+    // Only spheres within 100 units are tested (keeps the math in 16 bits).
+    function boolean shadowed(int hx, int hy, int hz, int skip) {
+        var int i, ox, oy, oz, d, q0, q1, q2;
+        var boolean found;
+        let found = false;
+        let i = 0;
+        while (i < 3) {
+            if (~(i = skip)) {
+                let ox = scx[i] - hx;
+                let oy = scy[i] - hy;
+                let oz = scz[i] - hz;
+                if ((Math.abs(ox) < 100) & (Math.abs(oy) < 100) & (Math.abs(oz) < 100)) {
+                    let d = ((ox * -40) + (oy * -70)) + (oz * -58);
+                    if (d > 0) {
+                        let q0 = ((oy * -58) + (oz * 70)) / 25;
+                        let q1 = ((oz * -40) + (ox * 58)) / 25;
+                        let q2 = ((ox * -70) + (oy * 40)) / 25;
+                        if ((Math.abs(q0) < 61) & (Math.abs(q1) < 61) & (Math.abs(q2) < 61)) {
+                            if (((q0 * q0) + (q1 * q1) + (q2 * q2)) < (srad2[i] * 16)) {
+                                let found = true;
+                            }
+                        }
+                    }
+                }
+            }
+            let i = i + 1;
+        }
+        return found;
+    }
+
+    // Shoot the ray (sx, sy, 64) and return a brightness 0..16.
+    function int trace(int sx, int sy, int by) {
+        var int l, i, c0, c1, c2, p2, dc4, thc4, t0, best, which;
+        var int hx, hy, hz, nx, ny, nz, dot, b, tf4, gx, gz;
+        var boolean onFloor;
+
+        let l = Math.sqrt(((sx * sx) + (sy * sy)) + 4096);
+        let best = 32767;
+        let which = -1;
+
+        // ---- spheres ----
+        let i = 0;
+        while (i < 3) {
+            let c0 = ((((scy[i] * 64) - (scz[i] * sy)) * 4) / l);
+            let c1 = ((((scz[i] * sx) - (scx[i] * 64)) * 4) / l);
+            let c2 = ((((scx[i] * sy) - (scy[i] * sx)) * 4) / l);
+            if ((Math.abs(c0) < 61) & (Math.abs(c1) < 61) & (Math.abs(c2) < 61)) {
+                let p2 = (c0 * c0) + (c1 * c1) + (c2 * c2);   // (4*distance)^2
+                if (p2 < (srad2[i] * 16)) {
+                    let dc4 = ((((sx * scx[i]) + (sy * scy[i])) + (64 * scz[i])) * 4) / l;
+                    let thc4 = Math.sqrt((srad2[i] * 16) - p2);
+                    let t0 = dc4 - thc4;                       // hit distance * 4
+                    if ((t0 > 0) & (t0 < best)) {
+                        let best = t0;
+                        let which = i;
+                    }
+                }
+            }
+            let i = i + 1;
+        }
+
+        // ---- floor (plane y = 20), only below the horizon ----
+        let onFloor = false;
+        if (sy > 0) {
+            let tf4 = (80 * l) / sy;
+            if (tf4 < best) {
+                let onFloor = true;
+            }
+        }
+
+        let b = 0;
+        if (onFloor) {
+            let hx = (sx * 20) / sy;
+            let hz = 1280 / sy;
+            let hy = 20;
+            if (hz > 400) {
+                let b = 9;   // far away: flat grey, hides moire
+            } else {
+                let gx = (hx + 2000) / 20;
+                let gz = hz / 20;
+                if (((gx + gz) & 1) = 0) { let b = 13; } else { let b = 6; }
+                if (Main.shadowed(hx, hy, hz, -1)) { let b = b - 5; }
+            }
+        } else {
+            if (which > -1) {
+                let l = 4 * l;
+                let hx = (sx * best) / l;
+                let hy = (sy * best) / l;
+                let hz = (64 * best) / l;
+                let nx = hx - scx[which];
+                let ny = hy - scy[which];
+                let nz = hz - scz[which];
+                let dot = ((nx * -40) + (ny * -70)) + (nz * -58);
+                let b = 2;
+                if (dot > 0) {
+                    if (~(Main.shadowed(hx, hy, hz, which))) {
+                        let b = 2 + (((dot / srad[which]) * 14) / 100);
+                    }
+                }
+            } else {
+                let b = 2 + (by / 4);   // sky gradient
+            }
+        }
+
+        if (b < 0) { let b = 0; }
+        if (b > 16) { let b = 16; }
+        return b;
+    }
+
+    function void main() {
+        var Array br;
+        var int by, wx, k, r, word, t;
+
+        do Main.init();
+        let br = Array.new(4);
+
+        let by = 0;
+        while (by < 64) {
+            let wx = 0;
+            while (wx < 32) {
+                // brightness of the 4 blocks that share one screen word
+                let k = 0;
+                while (k < 4) {
+                    let br[k] = Main.trace((((wx * 4) + k) - 64), (by - 32), by);
+                    let k = k + 1;
+                }
+                // write the 4 pixel rows of those 4 blocks
+                let r = 0;
+                while (r < 4) {
+                    let word = pat[(br[0] * 4) + r] + (pat[(br[1] * 4) + r] * 16) + (pat[(br[2] * 4) + r] * 256);
+                    let t = pat[(br[3] * 4) + r];
+                    if (t > 7) {
+                        // top nibble has bit 15 set: avoid signed overflow
+                        let word = (word + ((t - 8) * 4096)) - 32767;
+                        let word = word - 1;
+                    } else {
+                        let word = word + (t * 4096);
+                    }
+                    do Memory.poke(16384 + (((by * 4) + r) * 32) + wx, word);
+                    let r = r + 1;
+                }
+                let wx = wx + 1;
+            }
+            let by = by + 1;
+        }
+        do br.dispose();
+        return;
+    }
+}
