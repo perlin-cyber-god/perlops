@@ -1,0 +1,139 @@
+/**
+ * Mandelbrot explorer for Hack.
+ *
+ * Numbers are fixed point with 12 fractional bits: 1.0 = 4096, 2.0 = 8192.
+ * The hard part: multiplying two such numbers needs a 32-bit product, but Jack
+ * only has 16 bits. fmul() splits each number into 7-bit halves
+ *      a = ah*128 + al       b = bh*128 + bl
+ * and adds up the four partial products, each small enough to fit in 16 bits.
+ *
+ * Rendering is progressive: blocks of 16x16 pixels first (almost instant), then
+ * 8x8, 4x4 and finally 2x2. Press a key at any time and the render restarts at
+ * the new view.
+ *
+ * Keys: arrows = pan, Z = zoom in, X = zoom out, R = reset, Q = quit.
+ * Zoom is limited to 5 levels: with only 12 fractional bits, deeper than that
+ * a pixel is smaller than the smallest number we can represent.
+ */
+class Main {
+    static Array steps;   // size of one pixel in fixed point, per zoom level
+
+    function void init() {
+        let steps = Array.new(5);
+        let steps[0] = 28;   // 512 px * 28 / 4096 = 3.5 units wide
+        let steps[1] = 14;
+        let steps[2] = 7;
+        let steps[3] = 4;
+        let steps[4] = 2;
+        return;
+    }
+
+    // fixed point multiply: (a * b) / 4096 without overflowing 16 bits.
+    // Inputs must satisfy |a|, |b| < 16384.
+    function int fmul(int a, int b) {
+        var int ah, al, bh, bl, r;
+        var boolean neg;
+        let neg = false;
+        if (a < 0) { let a = -a; let neg = ~neg; }
+        if (b < 0) { let b = -b; let neg = ~neg; }
+        let ah = a / 128;
+        let al = a & 127;
+        let bh = b / 128;
+        let bl = b & 127;
+        // a*b = ah*bh*16384 + (ah*bl + al*bh)*128 + al*bl, then divide by 4096
+        let r = ((ah * bh) * 4) + (((ah * bl) + (al * bh)) / 32) + ((al * bl) / 4096);
+        if (neg) { let r = -r; }
+        return r;
+    }
+
+    // Number of iterations of z = z*z + c before escaping; maxIter means "inside".
+    function int iterate(int cr, int ci, int maxIter) {
+        var int x, y, xx, yy, xy, t, n;
+        let x = 0;
+        let y = 0;
+        let n = 0;
+        while (n < maxIter) {
+            // here |x| and |y| are always <= 8191 (< 2.0)
+            let xx = Main.fmul(x, x);
+            let yy = Main.fmul(y, y);
+            if ((xx + yy) > 16384) { return n; }   // |z|^2 > 4
+            let xy = Main.fmul(x, y);
+            let t = (xx - yy) + cr;
+            let y = (xy + xy) + ci;
+            let x = t;
+            // far outside already: escaped for sure (also protects fmul's range)
+            if ((Math.abs(x) > 8191) | (Math.abs(y) > 8191)) { return n + 1; }
+            let n = n + 1;
+        }
+        return maxIter;
+    }
+
+    // One pass over the whole screen with square blocks of size bs.
+    // Returns false if it was interrupted by a key press.
+    function boolean renderPass(int cx, int cy, int step, int bs, int maxIter) {
+        var int py, px, cr, ci, n, half;
+        let half = bs / 2;
+        let py = 0;
+        while (py < 256) {
+            if (Keyboard.keyPressed() > 0) { return false; }
+            let ci = cy + (((py + half) - 128) * step);
+            let px = 0;
+            while (px < 512) {
+                let cr = cx + (((px + half) - 256) * step);
+                let n = Main.iterate(cr, ci, maxIter);
+                // black = inside the set, plus thin bands to show the escape speed
+                do Screen.setColor((n = maxIter) | ((n & 3) = 3));
+                do Screen.drawRectangle(px, py, (px + bs) - 1, (py + bs) - 1);
+                let px = px + bs;
+            }
+            let py = py + bs;
+        }
+        return true;
+    }
+
+    function void main() {
+        var int key, level, cx, cy, bs, pan;
+        var boolean running, done;
+
+        do Main.init();
+        let level = 0;
+        let cx = -2048;   // -0.5
+        let cy = 0;
+        let bs = 16;
+        let running = true;
+
+        while (running) {
+            let key = Keyboard.keyPressed();
+            if (key > 0) {
+                let pan = steps[level] * 64;       // 64 pixels worth
+                if (key = 81)  { let running = false; }
+                if (key = 130) { let cx = cx - pan; }
+                if (key = 132) { let cx = cx + pan; }
+                if (key = 131) { let cy = cy - pan; }
+                if (key = 133) { let cy = cy + pan; }
+                if (key = 90)  { if (level < 4) { let level = level + 1; } }
+                if (key = 88)  { if (level > 0) { let level = level - 1; } }
+                if (key = 82)  { let level = 0; let cx = -2048; let cy = 0; }
+
+                // keep the view inside the range fixed point can handle
+                if (cx < -10000) { let cx = -10000; }
+                if (cx > 10000)  { let cx = 10000; }
+                if (cy < -8000)  { let cy = -8000; }
+                if (cy > 8000)   { let cy = 8000; }
+
+                // wait for the key to be released, then start a fresh render
+                while (Keyboard.keyPressed() > 0) { let key = 0; }
+                let bs = 16;
+            } else {
+                if (bs > 0) {
+                    let done = Main.renderPass(cx, cy, steps[level], bs, 24 + (level * 14));
+                    if (done) {
+                        if (bs = 2) { let bs = 0; } else { let bs = bs / 2; }
+                    }
+                }
+            }
+        }
+        do Screen.clearScreen();
+        return;
+    }
+}
