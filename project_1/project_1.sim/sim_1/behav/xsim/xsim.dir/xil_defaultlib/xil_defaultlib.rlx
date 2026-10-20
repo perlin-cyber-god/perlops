@@ -1,0 +1,18 @@
+0.7
+2020.2
+Nov 14 2025
+12:36:23
+/home/perlin/Downloads/hack_cpu_vivado/rtl/hack_alu.v,1792459862,verilog,,/home/perlin/Downloads/hack_cpu_vivado/rtl/hack_cpu.v,,hack_alu,,,../../../../../Documents/projects/2025.2/data/rsb/busdef,,,,,
+/home/perlin/Downloads/hack_cpu_vivado/rtl/hack_computer.v,1792459862,verilog,,/home/perlin/Downloads/hack_cpu_vivado/rtl/hack_cpu.v,,hack_computer,,,../../../../../Documents/projects/2025.2/data/rsb/busdef,,,,,
+/home/perlin/Downloads/hack_cpu_vivado/rtl/hack_cpu.v,1792459862,verilog,,/home/perlin/Downloads/hack_cpu_vivado/rtl/hack_pc.v,,hack_cpu,,,../../../../../Documents/projects/2025.2/data/rsb/busdef,,,,,
+/home/perlin/Downloads/hack_cpu_vivado/rtl/hack_memory.v,1792459862,verilog,,/home/perlin/Downloads/hack_cpu_vivado/tb/tb_memory.v,,hack_memory,,,../../../../../Documents/projects/2025.2/data/rsb/busdef,,,,,
+/home/perlin/Downloads/hack_cpu_vivado/rtl/hack_pc.v,1792459862,verilog,,/home/perlin/Downloads/hack_cpu_vivado/rtl/hack_register.v,,hack_pc,,,../../../../../Documents/projects/2025.2/data/rsb/busdef,,,,,
+/home/perlin/Downloads/hack_cpu_vivado/rtl/hack_register.v,1792459862,verilog,,/home/perlin/Downloads/hack_cpu_vivado/tb/tb_cpu.v,,hack_register,,,../../../../../Documents/projects/2025.2/data/rsb/busdef,,,,,
+/home/perlin/Downloads/hack_cpu_vivado/rtl/hack_rom32k.v,1792459862,verilog,,/home/perlin/Downloads/hack_cpu_vivado/tb/tb_computer.v,,hack_rom32k,,,../../../../../Documents/projects/2025.2/data/rsb/busdef,,,,,
+/home/perlin/Downloads/hack_cpu_vivado/tb/tb_add_demo.v,1792459880,verilog,,,,tb_add_demo,,,../../../../../Documents/projects/2025.2/data/rsb/busdef,,,,,
+/home/perlin/Downloads/hack_cpu_vivado/tb/tb_alu.v,1792459910,verilog,,,,tb_alu,,,../../../../../Documents/projects/2025.2/data/rsb/busdef,,,,,
+/home/perlin/Downloads/hack_cpu_vivado/tb/tb_computer.v,1792459866,verilog,,,,tb_computer,,,../../../../../Documents/projects/2025.2/data/rsb/busdef,,,,,
+/home/perlin/Downloads/hack_cpu_vivado/tb/tb_cpu.v,1792459862,verilog,,,,tb_cpu,,,../../../../../Documents/projects/2025.2/data/rsb/busdef,,,,,
+/home/perlin/Downloads/hack_cpu_vivado/tb/tb_memory.v,1792459862,verilog,,,,tb_memory,,,../../../../../Documents/projects/2025.2/data/rsb/busdef,,,,,
+/home/perlin/Downloads/hack_cpu_vivado/tb/tb_regpc.v,1792459862,verilog,,,,tb_regpc,,,../../../../../Documents/projects/2025.2/data/rsb/busdef,,,,,
+/home/perlin/project_1/project_1.sim/sim_1/behav/xsim/glbl.v,1756381829,verilog,,,,glbl,,,,,,,,

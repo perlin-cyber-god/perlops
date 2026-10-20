@@ -1,0 +1,13 @@
+# compile verilog/system verilog design source files
+verilog xil_defaultlib  --include "../../../../../Documents/projects/2025.2/data/rsb/busdef" \
+"../../../../../Downloads/hack_cpu_vivado/rtl/hack_alu.v" \
+"../../../../../Downloads/hack_cpu_vivado/rtl/hack_cpu.v" \
+"../../../../../Downloads/hack_cpu_vivado/rtl/hack_pc.v" \
+"../../../../../Downloads/hack_cpu_vivado/rtl/hack_register.v" \
+"../../../../../Downloads/hack_cpu_vivado/tb/tb_cpu.v" \
+
+# compile glbl module
+verilog xil_defaultlib "glbl.v"
+
+# Do not sort compile order
+nosort

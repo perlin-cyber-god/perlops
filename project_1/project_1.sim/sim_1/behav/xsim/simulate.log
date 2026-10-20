@@ -1,0 +1,8 @@
+Time resolution is 1 ps
+[tb_cpu] start
+[tb_cpu] test 1  28 comp x 8 dest x 8 jump x 4 operand sets : 50176 checks
+[tb_cpu] test 2  A-instructions                             : 2408 checks
+[tb_cpu] test 3  directed (jump table, AM=, jump uses old A, reset) : 36 checks
+[tb_cpu] 52620 checks, 0 errors
+TB_CPU PASSED
+$finish called at time : 78002 ns : File "/home/perlin/Downloads/hack_cpu_vivado/tb/tb_cpu.v" Line 269
