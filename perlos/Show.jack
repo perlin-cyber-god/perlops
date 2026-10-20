@@ -1,0 +1,162 @@
+/**
+ * Scenes of the PERLOPS falcon intro:
+ *   wind -> flight -> mark -> name -> hold -> shutter
+ */
+class Show {
+
+    // ---------------- 1. wind streaks sweep left to right ----------------
+
+    /** Horizontal line from xa to xb at height y, clipped to the screen. */
+    function void hline(int y, int xa, int xb) {
+        if (xb < 0) { return; }
+        if (xa > 511) { return; }
+        if (xa < 0) { let xa = 0; }
+        if (xb > 511) { let xb = 511; }
+        do Screen.drawLine(xa, y, xb, y);
+        return;
+    }
+
+    function void wind() {
+        var int f, i, y, sp, len, head;
+        do Gfx.clear();
+        let f = 0;
+        while (f < 42) {
+            let i = 0;
+            while (i < 16) {
+                let y = 12 + (i * 15);
+                let sp = 20 + ((i & 3) * 8);
+                let len = 40 + ((i * 37) & 63);
+                let head = ((i * 53) & 127) + (f * sp);
+                do Gfx.ink();                                      // new piece at the head
+                do Show.hline(y, head - sp, head);
+                do Gfx.paper();                                    // erase the tail
+                do Show.hline(y, head - len - sp, head - len);
+                let i = i + 1;
+            }
+            do Sys.wait(8);
+            let f = f + 1;
+        }
+        return;
+    }
+
+    // ---------------- 2. the falcon flies in, wings beating ----------------
+
+    function void flight() {
+        var int f, sc, v, ov, osc;
+        do Gfx.clear();
+        let ov = 0;
+        let osc = 2;
+        let f = 0;
+        while (f < 61) {
+            let sc = 2 + ((f * 5) / 60);
+            let v = Trig.sin(f * 14);
+            if (f > 0) {
+                do Gfx.paper();
+                do Falcon.draw(256, 100, osc, ov, 8);   // erase last pose
+            }
+            do Gfx.ink();
+            do Falcon.draw(256, 100, sc, v, 8);
+            let ov = v;
+            let osc = sc;
+            do Sys.wait(5);
+            let f = f + 1;
+        }
+        return;
+    }
+
+    // ---------------- 3. the emblem draws itself on ----------------
+
+    function void mark() {
+        var int t;
+        do Gfx.clear();
+        do Gfx.ink();
+        let t = 1;
+        while (t < 9) {
+            do Falcon.draw(256, 76, 3, 40, t);
+            do Sys.wait(30);
+            let t = t + 1;
+        }
+        return;
+    }
+
+    // ---------------- 4. PERLOPS, written on letter by letter ----------------
+
+    function void name() {
+        var String s;
+        var int i, t;
+        let s = "PERLOPS";
+        do Gfx.ink();
+        let i = 0;
+        while (i < 7) {
+            let t = 1;
+            while (t < 9) {
+                do Glyphs.draw(s.charAt(i), 68 + (i * 56), 168, 5, t);
+                do Sys.wait(12);
+                let t = t + 1;
+            }
+            let i = i + 1;
+        }
+        do s.dispose();
+        return;
+    }
+
+    // ---------------- 5. hold: slow wing beats, three dots orbit ----------------
+
+    function void hold() {
+        var Array dx, dy;
+        var int f, i, d, v, ov;
+        let dx = Array.new(3);
+        let dy = Array.new(3);
+        let ov = 40;
+        let f = 0;
+        while (f < 160) {
+            // wings every other frame
+            if ((f & 1) = 0) {
+                let v = 24 + (Trig.sin(f * 5) / 2);
+                do Gfx.paper();
+                do Falcon.draw(256, 76, 3, ov, 8);
+                do Gfx.ink();
+                do Falcon.draw(256, 76, 3, v, 8);
+                let ov = v;
+            }
+            // orbiting dots (radius 72)
+            if (f > 0) {
+                do Gfx.paper();
+                let i = 0;
+                while (i < 3) {
+                    do Screen.drawRectangle(dx[i] - 2, dy[i] - 2, dx[i] + 2, dy[i] + 2);
+                    let i = i + 1;
+                }
+            }
+            do Gfx.ink();
+            let i = 0;
+            while (i < 3) {
+                let d = (f * 4) + (i * 85);
+                let dx[i] = 256 + ((Trig.cos(d) * 9) / 8);
+                let dy[i] = 88 + ((Trig.sin(d) * 9) / 8);
+                do Screen.drawRectangle(dx[i] - 2, dy[i] - 2, dx[i] + 2, dy[i] + 2);
+                let i = i + 1;
+            }
+            do Sys.wait(15);
+            let f = f + 1;
+        }
+        do dx.dispose();
+        do dy.dispose();
+        return;
+    }
+
+    // ---------------- 6. curtains close from both edges ----------------
+
+    function void shutter() {
+        var int i;
+        do Gfx.paper();
+        let i = 0;
+        while (i < 8) {
+            do Screen.drawRectangle(i * 32, 0, (i * 32) + 31, 255);
+            do Screen.drawRectangle(480 - (i * 32), 0, 511 - (i * 32), 255);
+            do Sys.wait(40);
+            let i = i + 1;
+        }
+        return;
+    }
+}

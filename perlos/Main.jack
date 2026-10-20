@@ -1,0 +1,15 @@
+/** PERLOPS falcon intro. Loops forever. */
+class Main {
+    function void main() {
+        do Trig.init();
+        while (true) {
+            do Show.wind();
+            do Show.flight();
+            do Show.mark();
+            do Show.name();
+            do Show.hold();
+            do Show.shutter();
+        }
+        return;
+    }
+}

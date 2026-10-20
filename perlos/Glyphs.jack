@@ -1,0 +1,65 @@
+/**
+ * Vector font for the letters P E R L O S.
+ * Each glyph lives on an 8 x 12 grid; sc is the pixel size of one grid unit
+ * (sc = 5 gives a 40 x 60 px letter). t = 1..8 draws the letter "on" progressively.
+ */
+class Glyphs {
+    function void ln(int x, int y, int sc, int ax, int ay, int bx, int by, int t) {
+        do Gfx.seg(x + (ax * sc), y + (ay * sc), x + (bx * sc), y + (by * sc), t);
+        return;
+    }
+
+    function void draw(int c, int x, int y, int sc, int t) {
+        if (c = 80) {  // P
+            do Glyphs.ln(x, y, sc, 0, 0, 0, 12, t);
+            do Glyphs.ln(x, y, sc, 0, 0, 6, 0, t);
+            do Glyphs.ln(x, y, sc, 6, 0, 8, 2, t);
+            do Glyphs.ln(x, y, sc, 8, 2, 8, 4, t);
+            do Glyphs.ln(x, y, sc, 8, 4, 6, 6, t);
+            do Glyphs.ln(x, y, sc, 6, 6, 0, 6, t);
+        }
+        if (c = 69) {  // E
+            do Glyphs.ln(x, y, sc, 0, 0, 0, 12, t);
+            do Glyphs.ln(x, y, sc, 0, 0, 8, 0, t);
+            do Glyphs.ln(x, y, sc, 0, 6, 6, 6, t);
+            do Glyphs.ln(x, y, sc, 0, 12, 8, 12, t);
+        }
+        if (c = 82) {  // R
+            do Glyphs.ln(x, y, sc, 0, 0, 0, 12, t);
+            do Glyphs.ln(x, y, sc, 0, 0, 6, 0, t);
+            do Glyphs.ln(x, y, sc, 6, 0, 8, 2, t);
+            do Glyphs.ln(x, y, sc, 8, 2, 8, 4, t);
+            do Glyphs.ln(x, y, sc, 8, 4, 6, 6, t);
+            do Glyphs.ln(x, y, sc, 6, 6, 0, 6, t);
+            do Glyphs.ln(x, y, sc, 3, 6, 8, 12, t);
+        }
+        if (c = 76) {  // L
+            do Glyphs.ln(x, y, sc, 0, 0, 0, 12, t);
+            do Glyphs.ln(x, y, sc, 0, 12, 8, 12, t);
+        }
+        if (c = 79) {  // O
+            do Glyphs.ln(x, y, sc, 2, 0, 6, 0, t);
+            do Glyphs.ln(x, y, sc, 6, 0, 8, 2, t);
+            do Glyphs.ln(x, y, sc, 8, 2, 8, 10, t);
+            do Glyphs.ln(x, y, sc, 8, 10, 6, 12, t);
+            do Glyphs.ln(x, y, sc, 6, 12, 2, 12, t);
+            do Glyphs.ln(x, y, sc, 2, 12, 0, 10, t);
+            do Glyphs.ln(x, y, sc, 0, 10, 0, 2, t);
+            do Glyphs.ln(x, y, sc, 0, 2, 2, 0, t);
+        }
+        if (c = 83) {  // S
+            do Glyphs.ln(x, y, sc, 8, 2, 6, 0, t);
+            do Glyphs.ln(x, y, sc, 6, 0, 2, 0, t);
+            do Glyphs.ln(x, y, sc, 2, 0, 0, 2, t);
+            do Glyphs.ln(x, y, sc, 0, 2, 0, 4, t);
+            do Glyphs.ln(x, y, sc, 0, 4, 2, 6, t);
+            do Glyphs.ln(x, y, sc, 2, 6, 6, 6, t);
+            do Glyphs.ln(x, y, sc, 6, 6, 8, 8, t);
+            do Glyphs.ln(x, y, sc, 8, 8, 8, 10, t);
+            do Glyphs.ln(x, y, sc, 8, 10, 6, 12, t);
+            do Glyphs.ln(x, y, sc, 6, 12, 2, 12, t);
+            do Glyphs.ln(x, y, sc, 2, 12, 0, 10, t);
+        }
+        return;
+    }
+}

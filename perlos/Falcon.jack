@@ -1,0 +1,53 @@
+/**
+ * An original falcon drawn from line segments, seen head-on with wings spread.
+ * Drawn in the current Screen colour, so call Gfx.ink() to draw it and
+ * Gfx.paper() (with the same arguments) to erase it.
+ *
+ *   cx, cy : screen position of the falcon's shoulders
+ *   sc     : size in quarters (4 = 1x, 7 = 1.75x). Wingspan is 140 * sc / 4 px
+ *   v      : wing pose -64..64  (+64 = wings fully raised, -64 = full downstroke)
+ *   t      : 1..8 draws the bird "on" progressively, 8 = complete
+ */
+class Falcon {
+    function void s(int cx, int cy, int sc, int x0, int y0, int x1, int y1, int t) {
+        do Gfx.seg(cx + ((x0 * sc) / 4), cy + ((y0 * sc) / 4),
+                   cx + ((x1 * sc) / 4), cy + ((y1 * sc) / 4), t);
+        return;
+    }
+
+    function void draw(int cx, int cy, int sc, int v, int t) {
+        var int m, ey, ty, ry;
+
+        // wing control points depend on the flap pose (y grows downwards)
+        let ey = -((v * 18) / 64);          // elbow
+        let ty = 16 - ((v * 44) / 64);      // wing tip
+        let ry = (ty / 2) + 22;             // trailing edge
+
+        // head and beak (centre line)
+        do Falcon.s(cx, cy, sc, 0, -10, 0, -4, t);
+
+        // m = -1 is the left half, m = +1 the right half (mirror image)
+        let m = -1;
+        while (m < 2) {
+            // wing outline
+            do Falcon.s(cx, cy, sc, m * 6, 0, m * 30, ey, t);
+            do Falcon.s(cx, cy, sc, m * 30, ey, m * 70, ty, t);
+            do Falcon.s(cx, cy, sc, m * 70, ty, m * 48, ry, t);
+            do Falcon.s(cx, cy, sc, m * 48, ry, m * 26, 28, t);
+            do Falcon.s(cx, cy, sc, m * 26, 28, m * 7, 30, t);
+            // feather struts
+            do Falcon.s(cx, cy, sc, m * 30, ey, m * 48, ry, t);
+            do Falcon.s(cx, cy, sc, m * 30, ey, m * 26, 28, t);
+            // body side and forked tail
+            do Falcon.s(cx, cy, sc, m * 6, 0, m * 7, 30, t);
+            do Falcon.s(cx, cy, sc, m * 7, 30, m * 10, 52, t);
+            do Falcon.s(cx, cy, sc, m * 10, 52, 0, 46, t);
+            // neck and head
+            do Falcon.s(cx, cy, sc, m * 6, -10, m * 6, 0, t);
+            do Falcon.s(cx, cy, sc, m * 6, -10, 0, -20, t);
+            do Falcon.s(cx, cy, sc, m * 6, -10, 0, -2, t);
+            let m = m + 2;
+        }
+        return;
+    }
+}
