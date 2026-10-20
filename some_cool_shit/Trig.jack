@@ -1,0 +1,97 @@
+/** Integer sin/cos. 256 angle units per turn, output scaled by 64. */
+class Trig {
+    static Array sn;
+
+    function void init() {
+        var Array q;
+        var int i;
+        let q = Array.new(65);
+        let q[0] = 0;
+        let q[1] = 2;
+        let q[2] = 3;
+        let q[3] = 5;
+        let q[4] = 6;
+        let q[5] = 8;
+        let q[6] = 9;
+        let q[7] = 11;
+        let q[8] = 12;
+        let q[9] = 14;
+        let q[10] = 16;
+        let q[11] = 17;
+        let q[12] = 19;
+        let q[13] = 20;
+        let q[14] = 22;
+        let q[15] = 23;
+        let q[16] = 24;
+        let q[17] = 26;
+        let q[18] = 27;
+        let q[19] = 29;
+        let q[20] = 30;
+        let q[21] = 32;
+        let q[22] = 33;
+        let q[23] = 34;
+        let q[24] = 36;
+        let q[25] = 37;
+        let q[26] = 38;
+        let q[27] = 39;
+        let q[28] = 41;
+        let q[29] = 42;
+        let q[30] = 43;
+        let q[31] = 44;
+        let q[32] = 45;
+        let q[33] = 46;
+        let q[34] = 47;
+        let q[35] = 48;
+        let q[36] = 49;
+        let q[37] = 50;
+        let q[38] = 51;
+        let q[39] = 52;
+        let q[40] = 53;
+        let q[41] = 54;
+        let q[42] = 55;
+        let q[43] = 56;
+        let q[44] = 56;
+        let q[45] = 57;
+        let q[46] = 58;
+        let q[47] = 59;
+        let q[48] = 59;
+        let q[49] = 60;
+        let q[50] = 60;
+        let q[51] = 61;
+        let q[52] = 61;
+        let q[53] = 62;
+        let q[54] = 62;
+        let q[55] = 62;
+        let q[56] = 63;
+        let q[57] = 63;
+        let q[58] = 63;
+        let q[59] = 64;
+        let q[60] = 64;
+        let q[61] = 64;
+        let q[62] = 64;
+        let q[63] = 64;
+        let q[64] = 64;
+
+        let sn = Array.new(256);
+        let i = 0;
+        while (i < 65) {
+            let sn[i] = q[i];
+            let sn[128 - i] = q[i];
+            let sn[128 + i] = -q[i];
+            if (i > 0) {
+                let sn[256 - i] = -q[i];
+            }
+            let i = i + 1;
+        }
+        do q.dispose();
+        return;
+    }
+
+    function int sin(int a) {
+        return sn[a & 255];
+    }
+
+    function int cos(int a) {
+        return sn[(a + 64) & 255];
+    }
+}

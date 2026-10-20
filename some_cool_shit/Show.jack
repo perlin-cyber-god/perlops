@@ -1,0 +1,255 @@
+/**
+ * The scenes of the brand reveal. Placeholder brand name: KAIROS.
+ *   burst -> cube -> mark -> name -> hold -> shutter
+ */
+class Show {
+
+    // ---------------- 1. starburst from (256, 90) ----------------
+
+    /** One ray segment at angle a (256 units per turn) from radius r0 to r1. */
+    function void spoke(int a, int r0, int r1) {
+        do Screen.drawLine(256 + ((Trig.cos(a) * r0) / 64), 90 + ((Trig.sin(a) * r0) / 64),
+                           256 + ((Trig.cos(a) * r1) / 64), 90 + ((Trig.sin(a) * r1) / 64));
+        return;
+    }
+
+    function void burst() {
+        var int f, i, r;
+        do Gfx.clear();
+
+        // rays shoot outwards...
+        do Gfx.ink();
+        let f = 0;
+        while (f < 21) {
+            let r = 6 + (f * 4);
+            let i = 0;
+            while (i < 32) {
+                do Show.spoke(i * 8, r - 4, r);
+                let i = i + 1;
+            }
+            do Sys.wait(10);
+            let f = f + 1;
+        }
+
+        // ...then the tails chase them off the screen
+        do Gfx.paper();
+        let f = 0;
+        while (f < 21) {
+            let r = 6 + (f * 4);
+            let i = 0;
+            while (i < 32) {
+                do Show.spoke(i * 8, r - 4, r);
+                let i = i + 1;
+            }
+            do Sys.wait(10);
+            let f = f + 1;
+        }
+        return;
+    }
+
+    // ---------------- 2. spinning wireframe cube ----------------
+
+    /** Draw the 12 cube edges between 8 projected vertices. */
+    function void edges(Array ax, Array ay, boolean on) {
+        var int i, b;
+        if (on) { do Gfx.ink(); } else { do Gfx.paper(); }
+        let i = 0;
+        while (i < 8) {
+            let b = 1;
+            while (b < 8) {
+                if ((i & b) = 0) {
+                    do Screen.drawLine(ax[i], ay[i], ax[i | b], ay[i | b]);
+                }
+                let b = b + b;
+            }
+            let i = i + 1;
+        }
+        return;
+    }
+
+    function void cube() {
+        var Array px, py, qx, qy;
+        var int f, i, m, s, ay, ax, sy, cy, sx, cx, x, y, z, x1, z1, y2, z2, den;
+
+        let px = Array.new(8);
+        let py = Array.new(8);
+        let qx = Array.new(8);
+        let qy = Array.new(8);
+        do Gfx.clear();
+        let i = 0;
+        while (i < 8) {
+            let qx[i] = 256;
+            let qy[i] = 90;
+            let i = i + 1;
+        }
+
+        let f = 0;
+        while (f < 73) {
+            // size grows, holds, shrinks
+            let m = f;
+            if ((72 - f) < m) { let m = 72 - f; }
+            let s = 6 + m;
+            if (s > 34) { let s = 34; }
+
+            let ay = f * 3;
+            let ax = f * 2;
+            let sy = Trig.sin(ay);
+            let cy = Trig.cos(ay);
+            let sx = Trig.sin(ax);
+            let cx = Trig.cos(ax);
+
+            let i = 0;
+            while (i < 8) {
+                if ((i & 1) = 0) { let x = -s; } else { let x = s; }
+                if ((i & 2) = 0) { let y = -s; } else { let y = s; }
+                if ((i & 4) = 0) { let z = -s; } else { let z = s; }
+                // rotate about Y, then X
+                let x1 = ((x * cy) + (z * sy)) / 64;
+                let z1 = ((z * cy) - (x * sy)) / 64;
+                let y2 = ((y * cx) - (z1 * sx)) / 64;
+                let z2 = ((y * sx) + (z1 * cx)) / 64;
+                // perspective
+                let den = 260 + z2;
+                let px[i] = 256 + ((x1 * 260) / den);
+                let py[i] = 90 + ((y2 * 260) / den);
+                let i = i + 1;
+            }
+
+            do Show.edges(qx, qy, false);   // wipe last frame
+            do Show.edges(px, py, true);    // draw this one
+
+            let i = 0;
+            while (i < 8) {
+                let qx[i] = px[i];
+                let qy[i] = py[i];
+                let i = i + 1;
+            }
+            do Sys.wait(5);
+            let f = f + 1;
+        }
+
+        do px.dispose();
+        do py.dispose();
+        do qx.dispose();
+        do qy.dispose();
+        return;
+    }
+
+    // ---------------- 3. the mark: a faceted gem, centre (256, 82) ----------------
+
+    function void mark() {
+        var Array ox, oy, ix, iy;
+        var int k, k2, k3, a, t;
+
+        let ox = Array.new(6);
+        let oy = Array.new(6);
+        let ix = Array.new(6);
+        let iy = Array.new(6);
+        let k = 0;
+        while (k < 6) {
+            let a = (k * 256) / 6;
+            let ox[k] = 256 + ((Trig.cos(a) * 46) / 64);
+            let oy[k] = 82 + ((Trig.sin(a) * 46) / 64);
+            let a = a + 21;   // inner ring is turned 30 degrees
+            let ix[k] = 256 + ((Trig.cos(a) * 24) / 64);
+            let iy[k] = 82 + ((Trig.sin(a) * 24) / 64);
+            let k = k + 1;
+        }
+
+        do Gfx.clear();
+        do Gfx.ink();
+        let t = 1;
+        while (t < 9) {
+            let k = 0;
+            while (k < 6) {
+                let k2 = k + 1;
+                if (k2 = 6) { let k2 = 0; }
+                let k3 = k - 1;
+                if (k3 < 0) { let k3 = 5; }
+                do Gfx.seg(ox[k], oy[k], ox[k2], oy[k2], t);   // outer ring
+                do Gfx.seg(ix[k], iy[k], ix[k2], iy[k2], t);   // inner ring
+                do Gfx.seg(ox[k], oy[k], ix[k], iy[k], t);     // facet edges
+                do Gfx.seg(ox[k], oy[k], ix[k3], iy[k3], t);
+                let k = k + 1;
+            }
+            do Sys.wait(30);
+            let t = t + 1;
+        }
+
+        do ox.dispose();
+        do oy.dispose();
+        do ix.dispose();
+        do iy.dispose();
+        return;
+    }
+
+    // ---------------- 4. the name, written on letter by letter ----------------
+
+    function void name() {
+        var String s;
+        var int i, t;
+        let s = "KAIROS";
+        do Gfx.ink();
+        let i = 0;
+        while (i < 6) {
+            let t = 1;
+            while (t < 9) {
+                do Glyphs.draw(s.charAt(i), 96 + (i * 56), 156, 5, t);
+                do Sys.wait(12);
+                let t = t + 1;
+            }
+            let i = i + 1;
+        }
+        do s.dispose();
+        return;
+    }
+
+    // ---------------- 5. hold: three dots orbit the mark ----------------
+
+    function void hold() {
+        var Array dx, dy;
+        var int f, i, d;
+        let dx = Array.new(3);
+        let dy = Array.new(3);
+        let f = 0;
+        while (f < 160) {
+            if (f > 0) {
+                do Gfx.paper();
+                let i = 0;
+                while (i < 3) {
+                    do Screen.drawRectangle(dx[i] - 2, dy[i] - 2, dx[i] + 2, dy[i] + 2);
+                    let i = i + 1;
+                }
+            }
+            do Gfx.ink();
+            let i = 0;
+            while (i < 3) {
+                let d = (f * 4) + (i * 85);
+                let dx[i] = 256 + Trig.cos(d);   // table is scaled by 64 -> orbit radius 64
+                let dy[i] = 82 + Trig.sin(d);
+                do Screen.drawRectangle(dx[i] - 2, dy[i] - 2, dx[i] + 2, dy[i] + 2);
+                let i = i + 1;
+            }
+            do Sys.wait(20);
+            let f = f + 1;
+        }
+        do dx.dispose();
+        do dy.dispose();
+        return;
+    }
+
+    // ---------------- 6. curtains close from both edges ----------------
+
+    function void shutter() {
+        var int i;
+        do Gfx.paper();
+        let i = 0;
+        while (i < 8) {
+            do Screen.drawRectangle(i * 32, 0, (i * 32) + 31, 255);
+            do Screen.drawRectangle(480 - (i * 32), 0, 511 - (i * 32), 255);
+            do Sys.wait(40);
+            let i = i + 1;
+        }
+        return;
+    }
+}

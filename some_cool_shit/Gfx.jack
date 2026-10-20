@@ -1,0 +1,32 @@
+/**
+ * Tiny drawing helpers. The Hack screen is black ink on white paper, so this
+ * intro runs "dark mode": the background is filled black (setColor(true)) and
+ * everything is drawn in white (setColor(false)).
+ */
+class Gfx {
+    /** White drawing colour. */
+    function void ink() {
+        do Screen.setColor(false);
+        return;
+    }
+
+    /** Black colour: draws the background, i.e. erases white things. */
+    function void paper() {
+        do Screen.setColor(true);
+        return;
+    }
+
+    function void clear() {
+        do Gfx.paper();
+        do Screen.drawRectangle(0, 0, 511, 255);
+        return;
+    }
+
+    /** Line from (x0,y0) towards (x1,y1), t/8 of the way (t = 8 draws all of it). */
+    function void seg(int x0, int y0, int x1, int y1, int t) {
+        do Screen.drawLine(x0, y0,
+                           x0 + (((x1 - x0) * t) / 8),
+                           y0 + (((y1 - y0) * t) / 8));
+        return;
+    }
+}

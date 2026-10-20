@@ -1,0 +1,15 @@
+/** Brand-reveal intro for a fictional company. Loops forever. */
+class Main {
+    function void main() {
+        do Trig.init();
+        while (true) {
+            do Show.burst();
+            do Show.cube();
+            do Show.mark();
+            do Show.name();
+            do Show.hold();
+            do Show.shutter();
+        }
+        return;
+    }
+}
