@@ -1,0 +1,270 @@
+/**
+ * Wolfenstein-style raycaster for Hack.
+ *
+ * World: 16x16 grid, one cell = 64 units. The player position is stored in
+ * 1/8 units (px, py) so slow movement doesn't round to zero.
+ * Angles: 64 steps per full turn; sin/cos have scale 256 (from a quarter table).
+ * Screen: 128 columns, each 4 pixels wide. One ray per column (DDA walk
+ * through the grid). Wall height on screen = 12288 / distance.
+ *
+ * Distances use "t" units: position = origin + t * rayDir / 256, so t equals
+ * the perpendicular distance (no fisheye) because the ray includes the camera plane.
+ *
+ * Shading: side-0 walls (hit a vertical grid line) = 2px black + 2px white stripes,
+ * side-1 walls = 1px black + 3px white, so the two orientations look different.
+ * Ceiling white, floor black.
+ *
+ * Keys: Left/Right turn, Up/Down walk, Q quit.
+ */
+class Main {
+    static Array map, sinq, hts;
+    static int px, py, ang;
+
+    // ---------- setup ----------
+
+    function void loadRow(int y, String s) {
+        var int x;
+        let x = 0;
+        while (x < 16) {
+            let map[(y * 16) + x] = s.charAt(x) - 48;
+            let x = x + 1;
+        }
+        return;
+    }
+
+    function void init() {
+        var int i;
+
+        // quarter wave: sin(k * 5.625 degrees) * 256, k = 0..16
+        let sinq = Array.new(17);
+        let sinq[0] = 0;    let sinq[1] = 25;   let sinq[2] = 50;   let sinq[3] = 74;
+        let sinq[4] = 98;   let sinq[5] = 121;  let sinq[6] = 142;  let sinq[7] = 162;
+        let sinq[8] = 181;  let sinq[9] = 198;  let sinq[10] = 213; let sinq[11] = 226;
+        let sinq[12] = 237; let sinq[13] = 245; let sinq[14] = 251; let sinq[15] = 255;
+        let sinq[16] = 256;
+
+        let map = Array.new(256);
+        do Main.loadRow(0,  "1111111111111111");
+        do Main.loadRow(1,  "1000000000000001");
+        do Main.loadRow(2,  "1011111011111101");
+        do Main.loadRow(3,  "1010000010000101");
+        do Main.loadRow(4,  "1010111010110101");
+        do Main.loadRow(5,  "1000100000100001");
+        do Main.loadRow(6,  "1110101111101111");
+        do Main.loadRow(7,  "1000100000000001");
+        do Main.loadRow(8,  "1011101110111101");
+        do Main.loadRow(9,  "1010000010100001");
+        do Main.loadRow(10, "1010111010101111");
+        do Main.loadRow(11, "1000100000100001");
+        do Main.loadRow(12, "1110101111101011");
+        do Main.loadRow(13, "1000100000000001");
+        do Main.loadRow(14, "1011111110111101");
+        do Main.loadRow(15, "1111111111111111");
+
+        // remembers what each column currently shows (-1 = force draw)
+        let hts = Array.new(128);
+        let i = 0;
+        while (i < 128) {
+            let hts[i] = -1;
+            let i = i + 1;
+        }
+
+        let px = 768;   // (1.5 cells) * 64 units * 8
+        let py = 768;
+        let ang = 0;    // facing +x (east)
+        return;
+    }
+
+    // ---------- trig ----------
+
+    function int sin64(int a) {
+        let a = a & 63;
+        if (~(a > 16)) { return sinq[a]; }
+        if (~(a > 32)) { return sinq[32 - a]; }
+        if (~(a > 48)) { return -sinq[a - 32]; }
+        return -sinq[64 - a];
+    }
+
+    function int cos64(int a) {
+        return Main.sin64(a + 16);
+    }
+
+    // ---------- collision ----------
+
+    function boolean wall(int x16, int y16) {
+        if ((x16 < 0) | (y16 < 0) | (x16 > 8191) | (y16 > 8191)) { return true; }
+        return map[((y16 / 512) * 16) + (x16 / 512)] > 0;
+    }
+
+    function int marg(int d) {
+        if (d > 0) { return 96; }
+        if (d < 0) { return -96; }
+        return 0;
+    }
+
+    function void move(int dx, int dy) {
+        var int nx, ny;
+        let nx = px + dx;
+        if (~Main.wall(nx + Main.marg(dx), py)) { let px = nx; }
+        let ny = py + dy;
+        if (~Main.wall(px, ny + Main.marg(dy))) { let py = ny; }
+        return;
+    }
+
+    // ---------- rendering ----------
+
+    function void castColumn(int col, int dirX, int dirY, int plX, int plY) {
+        var int c, rdx, rdy, ox, oy, mapX, mapY, stepX, stepY;
+        var int sdx, sdy, ddx, ddy, ax, ay, side, steps, perp;
+        var int h, half, top, bot, x, k;
+        var boolean hit;
+
+        let c = (col * 2) - 127;
+        let rdx = dirX + ((plX * c) / 128);
+        let rdy = dirY + ((plY * c) / 128);
+
+        let ox = px / 8;
+        let oy = py / 8;
+        let mapX = ox / 64;
+        let mapY = oy / 64;
+        let ax = Math.abs(rdx);
+        let ay = Math.abs(rdy);
+
+        // distance (in t units) to the first vertical grid line, and between them
+        if (ax = 0) {
+            let ddx = 32767;
+            let sdx = 32767;
+            let stepX = 1;
+        } else {
+            let ddx = 16384 / ax;
+            if (rdx < 0) {
+                let stepX = -1;
+                let sdx = ((ox - (mapX * 64)) * 256) / ax;
+            } else {
+                let stepX = 1;
+                let sdx = ((((mapX * 64) + 64) - ox) * 256) / ax;
+            }
+        }
+        // same for horizontal grid lines
+        if (ay = 0) {
+            let ddy = 32767;
+            let sdy = 32767;
+            let stepY = 1;
+        } else {
+            let ddy = 16384 / ay;
+            if (rdy < 0) {
+                let stepY = -1;
+                let sdy = ((oy - (mapY * 64)) * 256) / ay;
+            } else {
+                let stepY = 1;
+                let sdy = ((((mapY * 64) + 64) - oy) * 256) / ay;
+            }
+        }
+
+        // DDA: always step to whichever grid line is closer
+        let hit = false;
+        let steps = 0;
+        let side = 0;
+        let perp = 32767;
+        while ((~hit) & (steps < 24)) {
+            if (sdx < sdy) {
+                let side = 0;
+                let perp = sdx;
+                if (sdx > (32767 - ddx)) { let sdx = 32767; } else { let sdx = sdx + ddx; }
+                let mapX = mapX + stepX;
+            } else {
+                let side = 1;
+                let perp = sdy;
+                if (sdy > (32767 - ddy)) { let sdy = 32767; } else { let sdy = sdy + ddy; }
+                let mapY = mapY + stepY;
+            }
+            if (map[(mapY * 16) + mapX] > 0) { let hit = true; }
+            let steps = steps + 1;
+        }
+
+        if (perp < 4) { let perp = 4; }
+        let h = 12288 / perp;
+        if (h > 254) { let h = 254; }
+
+        // skip the drawing if this column looks the same as last frame
+        let k = (h * 2) + side;
+        if (k = hts[col]) { return; }
+        let hts[col] = k;
+
+        let half = h / 2;
+        let top = 128 - half;
+        let bot = 128 + half;
+        let x = col * 4;
+
+        do Screen.setColor(false);                       // ceiling + wall area white
+        do Screen.drawRectangle(x, 0, x + 3, bot);
+        do Screen.setColor(true);
+        if (side = 0) {
+            do Screen.drawRectangle(x, top, x + 1, bot); // 2px stripe
+        } else {
+            do Screen.drawLine(x, top, x, bot);          // 1px stripe
+        }
+        if (bot < 255) {
+            do Screen.drawRectangle(x, bot + 1, x + 3, 255);   // floor black
+        }
+        return;
+    }
+
+    function void render() {
+        var int dirX, dirY, plX, plY, col;
+        let dirX = Main.cos64(ang);
+        let dirY = Main.sin64(ang);
+        // camera plane = dir rotated 90 degrees, about 0.69 times as long (~69 degree view)
+        let plX = ((0 - dirY) * 11) / 16;
+        let plY = (dirX * 11) / 16;
+        let col = 0;
+        while (col < 128) {
+            do Main.castColumn(col, dirX, dirY, plX, plY);
+            let col = col + 1;
+        }
+        return;
+    }
+
+    // ---------- main loop ----------
+
+    function void main() {
+        var int key, dx, dy;
+        var boolean running, redraw;
+
+        do Main.init();
+        let running = true;
+        let redraw = true;
+
+        while (running) {
+            if (redraw) {
+                do Main.render();
+                let redraw = false;
+            }
+
+            let key = Keyboard.keyPressed();
+            if (key = 81) { let running = false; }     // Q
+            if (key = 130) {                           // left
+                let ang = (ang - 1) & 63;
+                let redraw = true;
+            }
+            if (key = 132) {                           // right
+                let ang = (ang + 1) & 63;
+                let redraw = true;
+            }
+            if (key = 131) {                           // up: forward
+                let dx = (Main.cos64(ang) * 32) / 256;
+                let dy = (Main.sin64(ang) * 32) / 256;
+                do Main.move(dx, dy);
+                let redraw = true;
+            }
+            if (key = 133) {                           // down: backward
+                let dx = (Main.cos64(ang) * -32) / 256;
+                let dy = (Main.sin64(ang) * -32) / 256;
+                do Main.move(dx, dy);
+                let redraw = true;
+            }
+        }
+        do Screen.clearScreen();
+        return;
+    }
+}
