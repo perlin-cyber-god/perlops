@@ -2,3 +2,6 @@ Running: xsim.dir/tb_add_demo_behav/xsimk -simmode gui -wdb tb_add_demo_behav.wd
 Design successfully loaded
 Design Loading Memory Usage: 199684 KB (Peak: 199684 KB)
 Design Loading CPU Usage: 900 ms
+Simulation completed
+Simulation Memory Usage: 281680 KB (Peak: 338952 KB)
+Simulation CPU Usage: 920 ms
