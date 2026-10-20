@@ -6,3 +6,4 @@ Time resolution is 1 ps
 [tb_cpu] 52620 checks, 0 errors
 TB_CPU PASSED
 $finish called at time : 78002 ns : File "/home/perlin/Downloads/hack_cpu_vivado/tb/tb_cpu.v" Line 269
+INFO: xsimkernel Simulation Memory Usage: 281424 KB (Peak: 338696 KB), Simulation CPU Usage: 930 ms
