@@ -1,0 +1,350 @@
+/**
+ * Tetris for the Hack platform.
+ * Board: 10 wide x 20 tall, each cell 11x11 pixels.
+ * Piece = 4 cells stored as offsets (px[i], py[i]) from a pivot (cx, cy).
+ * Rotation is done mathematically: (x, y) -> (-y, x).
+ * Remember: Jack has no operator precedence, so everything is parenthesised.
+ */
+class Game {
+    field Array board, px, py;
+    field int score, lines, rnd, frames, ptype, cx, cy;
+
+    constructor Game new() {
+        var int i;
+        let board = Array.new(200);
+        let px = Array.new(4);
+        let py = Array.new(4);
+        let i = 0;
+        while (i < 200) {
+            let board[i] = 0;
+            let i = i + 1;
+        }
+        let score = 0;
+        let lines = 0;
+        let rnd = 17;
+        let frames = 0;
+        let ptype = 0;
+        let cx = 4;
+        let cy = 1;
+        return this;
+    }
+
+    method void dispose() {
+        do board.dispose();
+        do px.dispose();
+        do py.dispose();
+        do Memory.deAlloc(this);
+        return;
+    }
+
+    // ---------- piece definitions ----------
+
+    method void cell(int i, int dx, int dy) {
+        let px[i] = dx;
+        let py[i] = dy;
+        return;
+    }
+
+    method void setShape(int t) {
+        if (t = 0) { // I
+            do cell(0, -1, 0); do cell(1, 0, 0); do cell(2, 1, 0); do cell(3, 2, 0);
+            return;
+        }
+        if (t = 1) { // O
+            do cell(0, 0, 0); do cell(1, 1, 0); do cell(2, 0, 1); do cell(3, 1, 1);
+            return;
+        }
+        if (t = 2) { // T
+            do cell(0, -1, 0); do cell(1, 0, 0); do cell(2, 1, 0); do cell(3, 0, 1);
+            return;
+        }
+        if (t = 3) { // S
+            do cell(0, -1, 1); do cell(1, 0, 1); do cell(2, 0, 0); do cell(3, 1, 0);
+            return;
+        }
+        if (t = 4) { // Z
+            do cell(0, -1, 0); do cell(1, 0, 0); do cell(2, 0, 1); do cell(3, 1, 1);
+            return;
+        }
+        if (t = 5) { // J
+            do cell(0, -1, 0); do cell(1, 0, 0); do cell(2, 1, 0); do cell(3, -1, 1);
+            return;
+        }
+        // L
+        do cell(0, -1, 0); do cell(1, 0, 0); do cell(2, 1, 0); do cell(3, 1, 1);
+        return;
+    }
+
+    method int nextType() {
+        var int t;
+        let rnd = ((rnd * 25) + 13) + frames;
+        if (rnd < 0) { let rnd = ~rnd; }
+        let t = rnd - ((rnd / 7) * 7);
+        return t;
+    }
+
+    method boolean spawn() {
+        let ptype = nextType();
+        do setShape(ptype);
+        let cx = 4;
+        let cy = 1;
+        return fits(cx, cy);
+    }
+
+    // ---------- collision ----------
+
+    // Can the current piece sit with its pivot at (nx, ny)?
+    method boolean fits(int nx, int ny) {
+        var int i, x, y;
+        var boolean ok;
+        let i = 0;
+        let ok = true;
+        while ((i < 4) & ok) {
+            let x = nx + px[i];
+            let y = ny + py[i];
+            if ((x < 0) | (x > 9) | (y < 0) | (y > 19)) {
+                let ok = false;
+            } else {
+                if (~(board[(y * 10) + x] = 0)) {
+                    let ok = false;
+                }
+            }
+            let i = i + 1;
+        }
+        return ok;
+    }
+
+    // ---------- movement ----------
+
+    method boolean tryMove(int dx, int dy) {
+        var boolean moved;
+        let moved = false;
+        do drawPiece(false);
+        if (fits(cx + dx, cy + dy)) {
+            let cx = cx + dx;
+            let cy = cy + dy;
+            let moved = true;
+        }
+        do drawPiece(true);
+        return moved;
+    }
+
+    method void rotate() {
+        var int i, t;
+        let i = 0;
+        while (i < 4) {
+            let t = px[i];
+            let px[i] = -py[i];
+            let py[i] = t;
+            let i = i + 1;
+        }
+        return;
+    }
+
+    method void unrotate() {
+        var int i, t;
+        let i = 0;
+        while (i < 4) {
+            let t = px[i];
+            let px[i] = py[i];
+            let py[i] = -t;
+            let i = i + 1;
+        }
+        return;
+    }
+
+    method void tryRotate() {
+        if (ptype = 1) { return; } // O piece does not rotate
+        do drawPiece(false);
+        do rotate();
+        if (~fits(cx, cy)) {
+            do unrotate();
+        }
+        do drawPiece(true);
+        return;
+    }
+
+    // ---------- board changes ----------
+
+    method void lock() {
+        var int i;
+        let i = 0;
+        while (i < 4) {
+            let board[((cy + py[i]) * 10) + (cx + px[i])] = 1;
+            let i = i + 1;
+        }
+        return;
+    }
+
+    // Removes full rows, returns how many were removed.
+    method int clearLines() {
+        var int y, x, r, count;
+        var boolean full;
+        let count = 0;
+        let y = 19;
+        while (~(y < 0)) {
+            let full = true;
+            let x = 0;
+            while (x < 10) {
+                if (board[(y * 10) + x] = 0) { let full = false; }
+                let x = x + 1;
+            }
+            if (full) {
+                let count = count + 1;
+                let r = y;
+                while (r > 0) {
+                    let x = 0;
+                    while (x < 10) {
+                        let board[(r * 10) + x] = board[((r - 1) * 10) + x];
+                        let x = x + 1;
+                    }
+                    let r = r - 1;
+                }
+                let x = 0;
+                while (x < 10) {
+                    let board[x] = 0;
+                    let x = x + 1;
+                }
+                // do not move y: the row that fell into place must be rechecked
+            } else {
+                let y = y - 1;
+            }
+        }
+        return count;
+    }
+
+    // ---------- drawing ----------
+
+    method void drawCell(int x, int y, boolean filled) {
+        var int sx, sy;
+        let sx = 200 + (x * 11);
+        let sy = 16 + (y * 11);
+        if (filled) {
+            do Screen.setColor(true);
+            do Screen.drawRectangle(sx + 1, sy + 1, sx + 9, sy + 9);
+        } else {
+            do Screen.setColor(false);
+            do Screen.drawRectangle(sx, sy, sx + 10, sy + 10);
+        }
+        return;
+    }
+
+    method void drawPiece(boolean filled) {
+        var int i;
+        let i = 0;
+        while (i < 4) {
+            do drawCell(cx + px[i], cy + py[i], filled);
+            let i = i + 1;
+        }
+        return;
+    }
+
+    method void redrawBoard() {
+        var int x, y;
+        let y = 0;
+        while (y < 20) {
+            let x = 0;
+            while (x < 10) {
+                do drawCell(x, y, board[(y * 10) + x] = 1);
+                let x = x + 1;
+            }
+            let y = y + 1;
+        }
+        return;
+    }
+
+    method void drawBorder() {
+        do Screen.setColor(true);
+        do Screen.drawLine(199, 15, 310, 15);
+        do Screen.drawLine(310, 15, 310, 236);
+        do Screen.drawLine(310, 236, 199, 236);
+        do Screen.drawLine(199, 236, 199, 15);
+        return;
+    }
+
+    method void showStats() {
+        // erase the old numbers first (avoids leftover digits)
+        do Screen.setColor(false);
+        do Screen.drawRectangle(72, 22, 140, 32);
+        do Screen.drawRectangle(72, 44, 140, 54);
+        do Screen.setColor(true);
+        do Output.moveCursor(2, 9);
+        do Output.printInt(score);
+        do Output.moveCursor(4, 9);
+        do Output.printInt(lines);
+        return;
+    }
+
+    // ---------- main loop ----------
+
+    method void run() {
+        var int key, last, tick, limit, cleared;
+        var boolean running, moved;
+
+        do Output.moveCursor(2, 2);  do Output.printString("Score:");
+        do Output.moveCursor(4, 2);  do Output.printString("Lines:");
+        do Output.moveCursor(8, 2);  do Output.printString("Left/Right: move");
+        do Output.moveCursor(9, 2);  do Output.printString("Up: rotate");
+        do Output.moveCursor(10, 2); do Output.printString("Down: soft drop");
+        do Output.moveCursor(11, 2); do Output.printString("Space: hard drop");
+        do Output.moveCursor(12, 2); do Output.printString("Q: quit");
+        do drawBorder();
+
+        let running = spawn();
+        do drawPiece(true);
+        do showStats();
+
+        let last = 0;
+        let tick = 0;
+        let limit = 15; // frames between automatic drops (frame = ~30ms)
+
+        while (running) {
+            let key = Keyboard.keyPressed();
+
+            if (key = 81) { let running = false; } // Q
+
+            if (running) {
+                if ((key = 130) & ~(key = last)) { let moved = tryMove(-1, 0); }
+                if ((key = 132) & ~(key = last)) { let moved = tryMove(1, 0); }
+                if ((key = 131) & ~(key = last)) { do tryRotate(); }
+                if (key = 133) { let moved = tryMove(0, 1); }
+                if ((key = 32) & ~(key = last)) {
+                    let moved = true;
+                    while (moved) { let moved = tryMove(0, 1); }
+                    let tick = limit + 1;
+                }
+                let last = key;
+
+                let tick = tick + 1;
+                if (tick > limit) {
+                    let tick = 0;
+                    if (~tryMove(0, 1)) {
+                        do lock();
+                        let cleared = clearLines();
+                        if (cleared > 0) {
+                            let lines = lines + cleared;
+                            let score = score + ((cleared * cleared) * 10);
+                            let limit = 15 - (lines / 5);
+                            if (limit < 3) { let limit = 3; }
+                            do redrawBoard();
+                        }
+                        let score = score + 1;
+                        do showStats();
+                        let running = spawn();
+                        if (running) {
+                            do drawPiece(true);
+                        } else {
+                            do Output.moveCursor(14, 2);
+                            do Output.printString("GAME OVER");
+                        }
+                    }
+                }
+            }
+
+            let frames = frames + 1;
+            if (frames > 30000) { let frames = 0; }
+            do Sys.wait(30);
+        }
+        return;
+    }
+}
